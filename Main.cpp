@@ -944,7 +944,7 @@ int WINAPI DllEntryPoint(HINSTANCE hinst, unsigned long reason,
 
 //---------------------------------------------------------------------------
 static tjs_int GlobalRefCountAtInit = 0;
-extern "C" HRESULT _stdcall V2Link(iTVPFunctionExporter *exporter)
+extern "C" __declspec(dllexport) HRESULT __stdcall V2Link(iTVPFunctionExporter *exporter)
 {
 	// スタブの初期化(必ず記述する)
 	TVPInitImportStub(exporter);
@@ -998,7 +998,7 @@ static bool TJS_USERENTRY catchUnlinkScripts(void *data, const tTVPExceptionDesc
 }
 
 
-extern "C" HRESULT _stdcall V2Unlink()
+extern "C" __declspec(dllexport) HRESULT __stdcall V2Unlink()
 {
 	// 吉里吉里側から、プラグインを解放しようとするときに呼ばれる関数。
 
