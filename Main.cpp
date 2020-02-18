@@ -992,6 +992,8 @@ static void TJS_USERENTRY tryUnlinkScripts(void *data)
   if (dispatch) {
     delMethod(dispatch, L"evalJSON");
     delMethod(dispatch, L"evalJSONStorage");
+    delMethod(dispatch, L"saveJSON");
+    delMethod(dispatch, L"toJSONString");
   }
 }
 
