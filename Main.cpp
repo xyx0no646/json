@@ -700,7 +700,8 @@ public:
 		if (membername) return TJS_E_MEMBERNOTFOUND;
 		if (numparams < 1) return TJS_E_BADPARAMCOUNT;
 
-		eval(IStringReader(param[0]->GetString()), result);
+		IStringReader x(param[0]->GetString());
+		eval(x, result);
 		return TJS_S_OK;
 	}
 };
@@ -725,7 +726,8 @@ public:
 		bool utf8 = numparams >= 2 ? (int*)param[1] != 0 : false;
 		tjs_int codepage = utf8 ? CP_UTF8 : CP_ACP;
 
-		eval(IFileReader(filename, codepage), result);
+		IFileReader x(filename, codepage);
+		eval(x, result);
 		return TJS_S_OK;
 	}
 };
@@ -925,7 +927,7 @@ public:
 		tjs_int numparams, tTJSVariant **param, iTJSDispatch2 *objthis) {
 		if (numparams < 1) return TJS_E_BADPARAMCOUNT;
 		if (result) {
-			IStringWriter writer(numparams > 1 ? *param[1] : 0);
+			IStringWriter writer(numparams > 1 ? (tjs_int)(*param[1]) : (tjs_int)(0));
 			getVariantString(*param[0], &writer);
 			*result = writer.buf;
 		}
