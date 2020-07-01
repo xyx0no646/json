@@ -12,10 +12,10 @@ public:
                 hex = false;
 		switch (newlinetype) {
 		case 1:
-			newlinestr = L"\n";
+			newlinestr = TJS_W("\n");
 			break;
 		default:
-			newlinestr  = L"\r\n";
+			newlinestr  = TJS_W("\r\n");
 			break;
 		}
 	}
@@ -68,11 +68,11 @@ public:
                  tTJSVariantString *str = TJSRealToHexString(num);
                  buf += str;
                  str->Release();
-                 buf += L" /* ";
+                 buf += TJS_W(" /* ");
                  str = TJSRealToString(num);
                  buf += str;
                  str->Release();
-                 buf += L" */";
+                 buf += TJS_W(" */");
                } else {
                  tTJSVariantString *str = TJSRealToString(num);
                  buf += str;
@@ -176,11 +176,11 @@ public:
                  tTJSVariantString *str = TJSRealToHexString(num);
                  buf += str;
                  str->Release();
-                 buf += L" /* ";
+                 buf += TJS_W(" /* ");
                  str = TJSRealToString(num);
                  buf += str;
                  str->Release();
-                 buf += L" */";
+                 buf += TJS_W(" */");
                } else {
                  tTJSVariantString *str = TJSRealToString(num);
                  buf += str;

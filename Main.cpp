@@ -2,12 +2,19 @@
  * copyright (c) 2007 Go Watanabe
  */
 
+#if 0
 #include <windows.h>
+#endif
+#include "ncbind/ncbind.hpp"
 #include "tp_stub.h"
+#include "istream_compat.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
 #include <algorithm>
+
+#define CP_UTF8 0
+#define CP_ACP 0
 
 using namespace std;
 
@@ -21,7 +28,7 @@ static void log(const tjs_char *format, ...)
 	va_list args;
 	va_start(args, format);
 	tjs_char msg[1024];
-	_vsnwprintf(msg, 1024, format, args);
+	TJS_vsnprintf(msg, 1024, format, args);
 	TVPAddLog(msg);
 	va_end(args);
 }
@@ -106,6 +113,7 @@ public:
 		}
 		int l = (int)mbline.length();
 		if (l > 0 || c != EOF) {
+#if 0
 			wchar_t *buf = new wchar_t[l + 1];
 			l = MultiByteToWideChar(codepage, 0,
 									mbline.data(),
@@ -114,6 +122,10 @@ public:
 			buf[l] = '\0';
 			str += buf;
 			delete buf;
+#endif
+			tjs_string utf16line;
+			TVPUtf8ToUtf16( utf16line, mbline );
+			str += utf16line;
 			return true;
 		} else {
 			return false;
@@ -220,7 +232,7 @@ public:
 					for (;;) {
 						c = getc();
 						if (c == EOF) {
-							error(L"コメントが閉じていません");
+							error(TJS_W("コメントが閉じていません"));
 							return EOF;
                         }
                         if (c == '*') {
@@ -273,7 +285,7 @@ public:
 
             c = next();
 			if (c == EOF) {
-				error(L"オブジェクトは '}' で終了する必要があります");
+				error(TJS_W("オブジェクトは '}' で終了する必要があります"));
 				return;
 			} else if (c == '}') {
 				return;
@@ -290,7 +302,7 @@ public:
 						ungetc();
 					}
 				} else if (c != ':') {
-					error(L"キーの後には ':' または '=' または '=>' が必要です");
+					error(TJS_W("キーの後には ':' または '=' または '=>' が必要です"));
 					return;
 				}
 
@@ -308,7 +320,7 @@ public:
 			case '}':
 				return;
 			default:
-				error(L" ',' または ';' または '}' が必要です");
+				error(TJS_W(" ',' または ';' または '}' が必要です"));
 				return;
 			}
         }
@@ -327,7 +339,7 @@ public:
             int ch = next();
 			switch (ch) {
 			case EOF:
-				error(L"配列は ']' で終了する必要があります");
+				error(TJS_W("配列は ']' で終了する必要があります"));
 				return;
 			case ']':
 				return;
@@ -354,7 +366,7 @@ public:
             case ']':
                 return;
             default:
-				error(L" ',' または ';' または ']' が必要です");
+				error(TJS_W(" ',' または ';' または ']' が必要です"));
                 return;
             }
         }
@@ -374,7 +386,7 @@ public:
 			case 0:
 			case '\n':
 			case '\r':
-				error(L"文字列が終端していません");
+				error(TJS_W("文字列が終端していません"));
 				return;
 			case '\\':
 				c = getc();
@@ -398,14 +410,20 @@ public:
 					{
 						ttstr work;
 						next(work, 4);
+						// TODO: alternative implementation
+#if 0
 						str += (tjs_char)wcstol(work.c_str(), NULL, 16);
+#endif
 					}
 					break;
 				case 'x' :
 					{
 						ttstr work;
 						next(work, 2);
+						// TODO: alternative implementation
+#if 0
 						str += (tjs_char)wcstol(work.c_str(), NULL, 16);
+#endif
 					};
 					break;
 				default:
@@ -440,7 +458,7 @@ public:
 	 * 指定した文字が文字列の構成要素かどうか
 	 */
 	bool isString(int ch) {
-		return ch > 0x80 || ch > ' ' && wcschr(L",:]}/\\\"[{;=#", ch) == NULL;
+		return ch > 0x80 || ch > ' ' && TJS_strchr(TJS_W(",:]}/\\\"[{;=#"), ch) == NULL;
 	}
 
 	/**
@@ -493,10 +511,10 @@ public:
 
 				// 数値
 				if (doubleValue) {
-					double value = wcstod(s.c_str(), NULL);
+					double value = TJS_strtod(s.c_str(), NULL);
 					var = value;
 				} else {
-					tjs_int64 value = _wcstoi64(s.c_str(), NULL, 0);
+					tjs_int64 value = TJS_atoi(s.c_str());
 					var = value;
 				}
 			}
@@ -513,21 +531,21 @@ public:
 				ungetc();
 				
 				// 識別子
-				if (s == L"true") {
+				if (s == TJS_W("true")) {
 					var = true;
-				} else if (s == L"false") {
+				} else if (s == TJS_W("false")) {
 					var = false;
-				} else if (s == L"null") {
+				} else if (s == TJS_W("null")) {
 					var.Clear();
-				} else if (s == L"void") {
+				} else if (s == TJS_W("void")) {
 					var.Clear();
 				} else {
-					ttstr msg = L"不明なキーワードです:";
+					ttstr msg = TJS_W("不明なキーワードです:");
 					msg += s;
 					error(msg.c_str());
 				}
 			} else {
-				ttstr msg = L"不明な文字です:";
+				ttstr msg = TJS_W("不明な文字です:");
 				error(msg.c_str());
 			}
 		}
@@ -677,7 +695,7 @@ static tjs_error eval(IReader &file, tTJSVariant *result)
 	}
 	file.close();
 	if (file.isError) {
-		TVPThrowExceptionMessage(L"JSONファイル のパースに失敗しました");
+		TVPThrowExceptionMessage(TJS_W("JSONファイル のパースに失敗しました"));
 	}
 	return ret;
 }
@@ -741,22 +759,22 @@ quoteString(const tjs_char *str, IWriter *writer)
 		int ch;
 		while ((ch = *p++)) {
 			if (ch == '"') {
-				writer->write(L"\\\"");
+				writer->write(TJS_W("\\\""));
 			} else if (ch == '\\') {
-			  writer->write(L"\\\\");
+			  writer->write(TJS_W("\\\\"));
 			} else if (ch == 0x08) {
-			  writer->write(L"\\b");
+			  writer->write(TJS_W("\\b"));
 			} else if (ch == 0x0c) {
-			  writer->write(L"\\f");
+			  writer->write(TJS_W("\\f"));
 			} else if (ch == 0x0a) {
-			  writer->write(L"\\n");
+			  writer->write(TJS_W("\\n"));
 			} else if (ch == 0x0d) {
-			  writer->write(L"\\r");
+			  writer->write(TJS_W("\\r"));
 			} else if (ch == 0x09) {
-			  writer->write(L"\\t");
+			  writer->write(TJS_W("\\t"));
 			} else if (ch < 0x20) {
-			  wchar_t buf[256];
-			  swprintf(buf, 255, L"\\u%04x", ch);
+			  tjs_char buf[256];
+			  TJS_snprintf(buf, 255, TJS_W("\\u%04x"), ch);
 			  writer->write(buf);
 			} else {
 				writer->write((tjs_char)ch);
@@ -764,7 +782,7 @@ quoteString(const tjs_char *str, IWriter *writer)
 		}
 		writer->write((tjs_char)'"');
 	} else {
-		writer->write(L"\"\"");
+		writer->write(TJS_W("\"\""));
 	}
 }
 
@@ -853,15 +871,15 @@ getVariantString(tTJSVariant &var, IWriter *writer)
 	switch(var.Type()) {
 
 	case tvtVoid:
-		writer->write(L"null");
+		writer->write(TJS_W("null"));
 		break;
 		
 	case tvtObject:
 		{
 			iTJSDispatch2 *obj = var.AsObjectNoAddRef();
 			if (obj == NULL) {
-				writer->write(L"null");
-			} else if (obj->IsInstanceOf(TJS_IGNOREPROP,NULL,NULL,L"Array",obj) == TJS_S_TRUE) {
+				writer->write(TJS_W("null"));
+			} else if (obj->IsInstanceOf(TJS_IGNOREPROP,NULL,NULL,TJS_W("Array"),obj) == TJS_S_TRUE) {
 				getArrayString(obj, writer);
 			} else {
 				getDictString(obj, writer);
@@ -880,7 +898,7 @@ getVariantString(tTJSVariant &var, IWriter *writer)
 	case tvtReal: {
 	  ttstr str = var;
 	  // delete top '+' of number.
-	  if (str[0] == L'+') {
+	  if (str[0] == TJS_W('+')) {
 	    ttstr src = str;
 	    str = src.c_str() + 1;
 	  }
@@ -889,7 +907,7 @@ getVariantString(tTJSVariant &var, IWriter *writer)
 	}
 
 	default:
-		writer->write(L"null");
+		writer->write(TJS_W("null"));
 		break;
 	};
 }
@@ -937,14 +955,17 @@ public:
 
 //---------------------------------------------------------------------------
 
+#if 0
 #pragma argsused
 int WINAPI DllEntryPoint(HINSTANCE hinst, unsigned long reason,
 	void* lpReserved)
 {
 	return 1;
 }
+#endif
 
 //---------------------------------------------------------------------------
+#if 0
 static tjs_int GlobalRefCountAtInit = 0;
 extern "C" __declspec(dllexport) HRESULT __stdcall V2Link(iTVPFunctionExporter *exporter)
 {
@@ -966,10 +987,10 @@ extern "C" __declspec(dllexport) HRESULT __stdcall V2Link(iTVPFunctionExporter *
 		TVPExecuteExpression(TJS_W("Scripts"), &varScripts);
 		iTJSDispatch2 *dispatch = varScripts.AsObjectNoAddRef();
 		if (dispatch) {
-			addMethod(dispatch, L"evalJSON",        new tEvalJSON());
-			addMethod(dispatch, L"evalJSONStorage", new tEvalJSONStorage());
-			addMethod(dispatch, L"saveJSON",        new tSaveJSON());
-			addMethod(dispatch, L"toJSONString",    new tToJSONString());
+			addMethod(dispatch, TJS_W("evalJSON"),        new tEvalJSON());
+			addMethod(dispatch, TJS_W("evalJSONStorage"), new tEvalJSONStorage());
+			addMethod(dispatch, TJS_W("saveJSON"),        new tSaveJSON());
+			addMethod(dispatch, TJS_W("toJSONString"),    new tToJSONString());
 		}
 	}
 	
@@ -983,17 +1004,44 @@ extern "C" __declspec(dllexport) HRESULT __stdcall V2Link(iTVPFunctionExporter *
 
 	return S_OK;
 }
+#endif
+static void PreRegistCallback()
+{
+	// Arary クラスメンバー取得
+	{
+		tTJSVariant varScripts;
+		TVPExecuteExpression(TJS_W("Array"), &varScripts);
+		iTJSDispatch2 *dispatch = varScripts.AsObjectNoAddRef();
+		// メンバ取得
+		ArrayCountProp = getMember(dispatch, TJS_W("count"));
+	}
+
+	{
+		tTJSVariant varScripts;
+		TVPExecuteExpression(TJS_W("Scripts"), &varScripts);
+		iTJSDispatch2 *dispatch = varScripts.AsObjectNoAddRef();
+		if (dispatch) {
+			addMethod(dispatch, TJS_W("evalJSON"),        new tEvalJSON());
+			addMethod(dispatch, TJS_W("evalJSONStorage"), new tEvalJSONStorage());
+			addMethod(dispatch, TJS_W("saveJSON"),        new tSaveJSON());
+			addMethod(dispatch, TJS_W("toJSONString"),    new tToJSONString());
+		}
+	}
+}
+
+NCB_PRE_REGIST_CALLBACK(PreRegistCallback);
 //---------------------------------------------------------------------------
+#if 0
 static void TJS_USERENTRY tryUnlinkScripts(void *data)
 {
   tTJSVariant varScripts;
   TVPExecuteExpression(TJS_W("Scripts"), &varScripts);
   iTJSDispatch2 *dispatch = varScripts.AsObjectNoAddRef();
   if (dispatch) {
-    delMethod(dispatch, L"evalJSON");
-    delMethod(dispatch, L"evalJSONStorage");
-    delMethod(dispatch, L"saveJSON");
-    delMethod(dispatch, L"toJSONString");
+    delMethod(dispatch, TJS_W("evalJSON"));
+    delMethod(dispatch, TJS_W("evalJSONStorage"));
+    delMethod(dispatch, TJS_W("saveJSON"));
+    delMethod(dispatch, TJS_W("toJSONString"));
   }
 }
 
@@ -1027,3 +1075,4 @@ extern "C" __declspec(dllexport) HRESULT __stdcall V2Unlink()
 
 	return S_OK;
 }
+#endif
