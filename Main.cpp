@@ -409,21 +409,17 @@ public:
 				case 'u':
 					{
 						ttstr work;
+						work += TJS_W("0x");
 						next(work, 4);
-						// TODO: alternative implementation
-#if 0
-						str += (tjs_char)wcstol(work.c_str(), NULL, 16);
-#endif
+						str += (tjs_char)work.AsInteger();
 					}
 					break;
 				case 'x' :
 					{
 						ttstr work;
+						work += TJS_W("0x");
 						next(work, 2);
-						// TODO: alternative implementation
-#if 0
-						str += (tjs_char)wcstol(work.c_str(), NULL, 16);
-#endif
+						str += (tjs_char)work.AsInteger();
 					};
 					break;
 				default:
