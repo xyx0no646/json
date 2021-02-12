@@ -615,6 +615,36 @@ public:
 	}
 };
 
+class IOctetReader : public IReader {
+	const tjs_uint8 *p;
+	tjs_uint length;
+	tjs_uint pos;
+
+public:
+	IOctetReader(const tjs_uint8 *in_dat, tjs_uint in_length)
+	{
+		p = in_dat;
+		length = in_length;
+		pos = 0;
+	}
+
+	void close(void)
+	{
+	}
+	
+	int getc(void)
+	{
+		return pos < length ? p[pos++] : EOF;
+	}
+	
+	void ungetc(void)
+	{
+		if (pos > 0) {
+			pos--;
+		}
+	}
+};
+
 // -----------------------------------------------------------------
 
 #include "Writer.hpp"
@@ -699,6 +729,13 @@ public:
 
 		if (membername) return TJS_E_MEMBERNOTFOUND;
 		if (numparams < 1) return TJS_E_BADPARAMCOUNT;
+
+		if (param[0]->Type() == tvtOctet)
+		{
+			IOctetReader x(param[0]->AsOctetNoAddRef()->GetData(), param[0]->AsOctetNoAddRef()->GetLength());
+			eval(x, result);
+			return TJS_S_OK;
+		}
 
 		IStringReader x(param[0]->GetString());
 		eval(x, result);
