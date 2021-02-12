@@ -791,7 +791,7 @@ quoteString(const tjs_char *str, IWriter *writer)
 			  writer->write(L"\\r");
 			} else if (ch == 0x09) {
 			  writer->write(L"\\t");
-			} else if (ch < 0x20) {
+			} else if (ch < 0x20 || ch >= 0x80) {
 			  wchar_t buf[256];
 			  swprintf(buf, 255, L"\\u%04x", ch);
 			  writer->write(buf);
