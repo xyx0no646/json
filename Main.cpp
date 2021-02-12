@@ -629,6 +629,36 @@ public:
 	}
 };
 
+class IOctetReader : public IReader {
+	const tjs_uint8 *p;
+	tjs_uint length;
+	tjs_uint pos;
+
+public:
+	IOctetReader(const tjs_uint8 *in_dat, tjs_uint in_length)
+	{
+		p = in_dat;
+		length = in_length;
+		pos = 0;
+	}
+
+	void close(void)
+	{
+	}
+	
+	int getc(void)
+	{
+		return pos < length ? p[pos++] : EOF;
+	}
+	
+	void ungetc(void)
+	{
+		if (pos > 0) {
+			pos--;
+		}
+	}
+};
+
 // -----------------------------------------------------------------
 
 #include "Writer.hpp"
@@ -714,6 +744,13 @@ public:
 		if (membername) return TJS_E_MEMBERNOTFOUND;
 		if (numparams < 1) return TJS_E_BADPARAMCOUNT;
 
+		if (param[0]->Type() == tvtOctet)
+		{
+			IOctetReader x(param[0]->AsOctetNoAddRef()->GetData(), param[0]->AsOctetNoAddRef()->GetLength());
+			eval(x, result);
+			return TJS_S_OK;
+		}
+
 		IStringReader x(param[0]->GetString());
 		eval(x, result);
 		return TJS_S_OK;
@@ -768,7 +805,7 @@ quoteString(const tjs_char *str, IWriter *writer)
 			  writer->write(TJS_W("\\r"));
 			} else if (ch == 0x09) {
 			  writer->write(TJS_W("\\t"));
-			} else if (ch < 0x20) {
+			} else if (ch < 0x20 || ch >= 0x80) {
 			  tjs_char buf[256];
 			  TJS_snprintf(buf, 255, TJS_W("\\u%04x"), ch);
 			  writer->write(buf);
