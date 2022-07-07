@@ -7,14 +7,18 @@
 #endif
 #include "ncbind/ncbind.hpp"
 #include "tp_stub.h"
+#ifndef _WIN32
 #include "istream_compat.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
 #include <algorithm>
 
+#ifndef _WIN32
 #define CP_UTF8 0
 #define CP_ACP 0
+#endif
 
 using namespace std;
 
