@@ -7,9 +7,6 @@
 #endif
 #include "ncbind/ncbind.hpp"
 #include "tp_stub.h"
-#ifndef _WIN32
-#include "istream_compat.h"
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
