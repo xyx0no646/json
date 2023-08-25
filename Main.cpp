@@ -5,7 +5,9 @@
 #if 0
 #include <windows.h>
 #endif
+#ifdef TVP_COMPILING_KRKRSDL2
 #include "ncbind/ncbind.hpp"
+#endif
 #include "tp_stub.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -124,9 +126,7 @@ public:
 			str += buf;
 			delete buf;
 #endif
-			tjs_string utf16line;
-			TVPUtf8ToUtf16( utf16line, mbline );
-			str += utf16line;
+			str += ttstr(mbline.c_str());
 			return true;
 		} else {
 			return false;
@@ -989,7 +989,43 @@ public:
 
 //---------------------------------------------------------------------------
 
-#if 0
+#ifdef TVP_COMPILING_KRKRSDL2
+static void PreRegistCallback()
+{
+	// Arary クラスメンバー取得
+	{
+		tTJSVariant varScripts;
+		TVPExecuteExpression(TJS_W("Array"), &varScripts);
+		iTJSDispatch2 *dispatch = varScripts.AsObjectNoAddRef();
+		// メンバ取得
+		ArrayCountProp = getMember(dispatch, TJS_W("count"));
+	}
+
+	{
+		tTJSVariant varScripts;
+		TVPExecuteExpression(TJS_W("Scripts"), &varScripts);
+		iTJSDispatch2 *dispatch = varScripts.AsObjectNoAddRef();
+		if (dispatch) {
+			addMethod(dispatch, TJS_W("evalJSON"),        new tEvalJSON());
+			addMethod(dispatch, TJS_W("evalJSONStorage"), new tEvalJSONStorage());
+			addMethod(dispatch, TJS_W("saveJSON"),        new tSaveJSON());
+			addMethod(dispatch, TJS_W("toJSONString"),    new tToJSONString());
+		}
+	}
+}
+
+NCB_PRE_REGIST_CALLBACK(PreRegistCallback);
+#endif
+
+#ifndef TVP_COMPILING_KRKRSDL2
+
+#ifdef _WIN32
+#define EXPORT(hr) extern "C" __declspec(dllexport) hr __stdcall
+#else
+#define EXPORT(hr) extern "C" __attribute__((visibility ("default"))) hr
+#endif
+
+#ifdef _WIN32
 #pragma argsused
 int WINAPI DllEntryPoint(HINSTANCE hinst, unsigned long reason,
 	void* lpReserved)
@@ -999,9 +1035,8 @@ int WINAPI DllEntryPoint(HINSTANCE hinst, unsigned long reason,
 #endif
 
 //---------------------------------------------------------------------------
-#if 0
 static tjs_int GlobalRefCountAtInit = 0;
-extern "C" __declspec(dllexport) HRESULT __stdcall V2Link(iTVPFunctionExporter *exporter)
+EXPORT(HRESULT) V2Link(iTVPFunctionExporter *exporter)
 {
 	// スタブの初期化(必ず記述する)
 	TVPInitImportStub(exporter);
@@ -1038,34 +1073,7 @@ extern "C" __declspec(dllexport) HRESULT __stdcall V2Link(iTVPFunctionExporter *
 
 	return S_OK;
 }
-#endif
-static void PreRegistCallback()
-{
-	// Arary クラスメンバー取得
-	{
-		tTJSVariant varScripts;
-		TVPExecuteExpression(TJS_W("Array"), &varScripts);
-		iTJSDispatch2 *dispatch = varScripts.AsObjectNoAddRef();
-		// メンバ取得
-		ArrayCountProp = getMember(dispatch, TJS_W("count"));
-	}
-
-	{
-		tTJSVariant varScripts;
-		TVPExecuteExpression(TJS_W("Scripts"), &varScripts);
-		iTJSDispatch2 *dispatch = varScripts.AsObjectNoAddRef();
-		if (dispatch) {
-			addMethod(dispatch, TJS_W("evalJSON"),        new tEvalJSON());
-			addMethod(dispatch, TJS_W("evalJSONStorage"), new tEvalJSONStorage());
-			addMethod(dispatch, TJS_W("saveJSON"),        new tSaveJSON());
-			addMethod(dispatch, TJS_W("toJSONString"),    new tToJSONString());
-		}
-	}
-}
-
-NCB_PRE_REGIST_CALLBACK(PreRegistCallback);
 //---------------------------------------------------------------------------
-#if 0
 static void TJS_USERENTRY tryUnlinkScripts(void *data)
 {
   tTJSVariant varScripts;
@@ -1084,7 +1092,7 @@ static bool TJS_USERENTRY catchUnlinkScripts(void *data, const tTVPExceptionDesc
 }
 
 
-extern "C" __declspec(dllexport) HRESULT __stdcall V2Unlink()
+EXPORT(HRESULT) V2Unlink()
 {
 	// 吉里吉里側から、プラグインを解放しようとするときに呼ばれる関数。
 
