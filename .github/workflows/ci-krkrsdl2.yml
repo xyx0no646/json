@@ -282,7 +282,7 @@
       "steps" : [
         {
           "name" : "Download all artifacts",
-          "uses" : "actions/download-artifact@v3"
+          "uses" : "actions/download-artifact@master"
         },
         {
           "name" : "Prepare artifacts for release",
